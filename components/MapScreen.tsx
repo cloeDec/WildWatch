@@ -1,14 +1,17 @@
 import Mapbox from "@rnmapbox/maps";
 import * as Location from "expo-location";
-import React, { useEffect } from "react";
-import { Dimensions, StyleSheet, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Dimensions, StyleSheet, View, Text } from "react-native";
+import { useRouter } from "expo-router";
 import { MAPBOX_CONFIG } from "../config/env";
+import { useObservations } from "../hooks/useObservations";
 
-// Initialiser Mapbox avec le token public depuis .env
 if (MAPBOX_CONFIG.PUBLIC_TOKEN) {
   Mapbox.setAccessToken(MAPBOX_CONFIG.PUBLIC_TOKEN);
 } else {
-  console.error('❌ Token Mapbox public manquant - vérifiez votre fichier .env');
+  console.error(
+    "❌ Token Mapbox public manquant - vérifiez votre fichier .env"
+  );
 }
 
 interface MapScreenProps {
@@ -18,13 +21,46 @@ interface MapScreenProps {
 const { width, height } = Dimensions.get("window");
 
 export const MapScreen: React.FC<MapScreenProps> = ({ location }) => {
+  const cameraRef = useRef<Mapbox.Camera>(null);
+  const router = useRouter();
+  const { observations } = useObservations();
+
   useEffect(() => {
     if (MAPBOX_CONFIG.PUBLIC_TOKEN) {
       Mapbox.setAccessToken(MAPBOX_CONFIG.PUBLIC_TOKEN);
     }
   }, []);
 
+  useEffect(() => {
+    if (location && cameraRef.current) {
+      const coordinates = [location.coords.longitude, location.coords.latitude];
+
+      const timer = setTimeout(() => {
+        cameraRef.current?.setCamera({
+          centerCoordinate: coordinates,
+          zoomLevel: MAPBOX_CONFIG.USER_LOCATION_ZOOM,
+          animationDuration: 2000,
+        });
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [location]);
+
   const coordinates = [location.coords.longitude, location.coords.latitude];
+
+  const handleMapPress = (feature: any) => {
+    if (feature.geometry && feature.geometry.coordinates) {
+      const [longitude, latitude] = feature.geometry.coordinates;
+      router.push({
+        pathname: '/observationModal',
+        params: {
+          latitude: latitude.toString(),
+          longitude: longitude.toString(),
+        },
+      });
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -39,14 +75,16 @@ export const MapScreen: React.FC<MapScreenProps> = ({ location }) => {
         pitchEnabled={true}
         attributionEnabled={true}
         logoEnabled={true}
+        onPress={handleMapPress}
       >
         <Mapbox.Camera
+          ref={cameraRef}
           centerCoordinate={coordinates}
-          zoomLevel={MAPBOX_CONFIG.DEFAULT_ZOOM}
+          zoomLevel={10}
           pitch={MAPBOX_CONFIG.DEFAULT_PITCH}
           heading={MAPBOX_CONFIG.DEFAULT_HEADING}
-          animationDuration={1000}
-          followUserLocation={true}
+          animationDuration={1500}
+          followUserLocation={false}
         />
         <Mapbox.UserLocation
           visible={true}
@@ -60,6 +98,22 @@ export const MapScreen: React.FC<MapScreenProps> = ({ location }) => {
             <View style={styles.markerOuter} />
           </View>
         </Mapbox.PointAnnotation>
+
+        {/* Affichage des observations existantes */}
+        {observations.map((observation) => (
+          <Mapbox.PointAnnotation
+            key={observation.id}
+            id={`observation-${observation.id}`}
+            coordinate={[observation.longitude, observation.latitude]}
+          >
+            <View style={styles.observationPin}>
+              <View style={styles.observationPinInner}>
+                <Text style={styles.observationPinText}>🦌</Text>
+              </View>
+              <View style={styles.observationPinPointer} />
+            </View>
+          </Mapbox.PointAnnotation>
+        ))}
         {location.coords.accuracy && (
           <Mapbox.ShapeSource
             id="accuracy-circle"
@@ -132,5 +186,40 @@ const styles = StyleSheet.create({
     borderColor: "white",
     position: "absolute",
     zIndex: 1,
+  },
+  observationPin: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  observationPinInner: {
+    backgroundColor: '#FF6B35',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  observationPinText: {
+    fontSize: 18,
+  },
+  observationPinPointer: {
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderTopWidth: 12,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#FF6B35',
+    marginTop: -2,
   },
 });
