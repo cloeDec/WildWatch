@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { useCurrentPosition } from '../hooks/useCurrentPosition';
 import { LocationLoadingScreen } from '../components/LocationLoadingScreen';
 import { LocationUnauthorizedScreen } from '../components/LocationUnauthorizedScreen';
-import { HomeScreen } from '../components/HomeScreen';
+import { MapScreen } from '../components/MapScreen';
 
 export default function Index() {
   const { location, status, error, requestPermission, refreshLocation } = useCurrentPosition();
@@ -31,7 +31,7 @@ export default function Index() {
 
       case 'granted':
         return location ? (
-          <HomeScreen location={location} onRefresh={refreshLocation} />
+          <MapScreen location={location} />
         ) : (
           <LocationLoadingScreen message="Finalisation de la géolocalisation..." />
         );

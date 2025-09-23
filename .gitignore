@@ -32,6 +32,10 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+
+# Mapbox tokens - IMPORTANT: Never commit these!
+# Your .env file contains sensitive API tokens
 
 # typescript
 *.tsbuildinfo

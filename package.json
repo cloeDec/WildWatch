@@ -16,6 +16,8 @@
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
+    "@rnmapbox/maps": "^10.1.44",
+    "dotenv": "^17.2.2",
     "expo": "~54.0.10",
     "expo-constants": "~18.0.9",
     "expo-dev-client": "~6.0.12",
