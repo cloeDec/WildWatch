@@ -1,8 +1,8 @@
 import Mapbox from "@rnmapbox/maps";
 import * as Location from "expo-location";
-import React, { useEffect, useRef } from "react";
-import { Dimensions, StyleSheet, View, Text } from "react-native";
 import { useRouter } from "expo-router";
+import React, { useEffect, useRef } from "react";
+import { Dimensions, Image, StyleSheet, View } from "react-native";
 import { MAPBOX_CONFIG } from "../config/env";
 import { useObservationsStore } from "../hooks/useObservationsStore";
 
@@ -25,8 +25,11 @@ export const MapScreen: React.FC<MapScreenProps> = ({ location }) => {
   const router = useRouter();
   const { observations } = useObservationsStore();
 
-  console.log('MapScreen: Nombre d\'observations:', observations.length);
-  console.log('MapScreen: Observations:', observations.map(o => ({ id: o.id, species: o.species })));
+  console.log("MapScreen: Nombre d'observations:", observations.length);
+  console.log(
+    "MapScreen: Observations:",
+    observations.map((o) => ({ id: o.id, species: o.species }))
+  );
 
   useEffect(() => {
     if (MAPBOX_CONFIG.PUBLIC_TOKEN) {
@@ -56,7 +59,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ location }) => {
     if (feature.geometry && feature.geometry.coordinates) {
       const [longitude, latitude] = feature.geometry.coordinates;
       router.push({
-        pathname: '/observationModal',
+        pathname: "/observationModal",
         params: {
           latitude: latitude.toString(),
           longitude: longitude.toString(),
@@ -102,21 +105,38 @@ export const MapScreen: React.FC<MapScreenProps> = ({ location }) => {
           </View>
         </Mapbox.PointAnnotation>
 
-        {/* Affichage des observations existantes */}
-        {observations.map((observation) => (
-          <Mapbox.PointAnnotation
-            key={observation.id}
-            id={`observation-${observation.id}`}
-            coordinate={[observation.longitude, observation.latitude]}
-          >
-            <View style={styles.observationPin}>
-              <View style={styles.observationPinInner}>
-                <Text style={styles.observationPinText}>🦌</Text>
+        {observations.map((observation) => {
+          console.log(
+            "MapScreen: Rendu pin pour observation:",
+            observation.id,
+            "à",
+            observation.latitude,
+            observation.longitude
+          );
+          return (
+            <Mapbox.PointAnnotation
+              key={observation.id}
+              id={`observation-${observation.id}`}
+              coordinate={[observation.longitude, observation.latitude]}
+              anchor={{ x: 0.5, y: 1 }}
+            >
+              <View style={styles.observationDropletPin}>
+                <View style={styles.pinShadow} />
+                <View style={styles.dropletShape}>
+                  <View style={styles.dropletTop}>
+                    <Image
+                      source={require("../assets/images/raccoon.png")}
+                      style={styles.dropletImage}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  <View style={styles.dropletNeck} />
+                  <View style={styles.dropletTip} />
+                </View>
               </View>
-              <View style={styles.observationPinPointer} />
-            </View>
-          </Mapbox.PointAnnotation>
-        ))}
+            </Mapbox.PointAnnotation>
+          );
+        })}
         {location.coords.accuracy && (
           <Mapbox.ShapeSource
             id="accuracy-circle"
@@ -190,39 +210,71 @@ const styles = StyleSheet.create({
     position: "absolute",
     zIndex: 1,
   },
-  observationPin: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  observationPinInner: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 20,
+  observationDropletPin: {
+    alignItems: "center",
+    justifyContent: "flex-start",
+    height: 60,
     width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+  },
+  pinShadow: {
+    position: "absolute",
+    bottom: -1,
+    left: 3,
+    width: 34,
+    height: 8,
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    borderRadius: 17,
+    opacity: 0.6,
+  },
+  dropletShape: {
+    alignItems: "center",
+    justifyContent: "flex-start",
+    height: 55,
+    width: 36,
+  },
+  dropletTop: {
+    width: 36,
+    height: 36,
+    backgroundColor: "#DC2626",
+    borderRadius: 18,
     borderWidth: 3,
-    borderColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    borderColor: "white",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 6,
+    zIndex: 3,
   },
-  observationPinText: {
-    fontSize: 18,
+  dropletNeck: {
+    width: 16,
+    height: 10,
+    backgroundColor: "#DC2626",
+    borderLeftWidth: 2,
+    borderRightWidth: 2,
+    borderColor: "white",
+    marginTop: -2,
+    zIndex: 2,
   },
-  observationPinPointer: {
+  dropletTip: {
     width: 0,
     height: 0,
-    backgroundColor: 'transparent',
-    borderStyle: 'solid',
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
+    backgroundColor: "transparent",
+    borderStyle: "solid",
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
     borderTopWidth: 12,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: '#FF6B35',
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: "#DC2626",
     marginTop: -2,
+    zIndex: 1,
+  },
+  dropletImage: {
+    width: 24,
+    height: 24,
+    tintColor: "white",
   },
 });
