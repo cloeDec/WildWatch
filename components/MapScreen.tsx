@@ -4,7 +4,7 @@ import React, { useEffect, useRef } from "react";
 import { Dimensions, StyleSheet, View, Text } from "react-native";
 import { useRouter } from "expo-router";
 import { MAPBOX_CONFIG } from "../config/env";
-import { useObservations } from "../hooks/useObservations";
+import { useObservationsStore } from "../hooks/useObservationsStore";
 
 if (MAPBOX_CONFIG.PUBLIC_TOKEN) {
   Mapbox.setAccessToken(MAPBOX_CONFIG.PUBLIC_TOKEN);
@@ -23,7 +23,10 @@ const { width, height } = Dimensions.get("window");
 export const MapScreen: React.FC<MapScreenProps> = ({ location }) => {
   const cameraRef = useRef<Mapbox.Camera>(null);
   const router = useRouter();
-  const { observations } = useObservations();
+  const { observations } = useObservationsStore();
+
+  console.log('MapScreen: Nombre d\'observations:', observations.length);
+  console.log('MapScreen: Observations:', observations.map(o => ({ id: o.id, species: o.species })));
 
   useEffect(() => {
     if (MAPBOX_CONFIG.PUBLIC_TOKEN) {

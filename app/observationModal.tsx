@@ -10,13 +10,23 @@ import {
   Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useObservations } from '../hooks/useObservations';
+import { useObservationsStore } from '../hooks/useObservationsStore';
 import { CreateObservationDto } from '../types/observation';
 
 export default function ObservationModal() {
   const router = useRouter();
   const params = useLocalSearchParams<{ latitude?: string; longitude?: string }>();
-  const { createNewObservation, isLoading } = useObservations();
+
+  console.log('ObservationModal: Appel de useObservationsStore...');
+  const hookResult = useObservationsStore();
+  console.log('ObservationModal: Résultat du hook simple:', hookResult);
+  console.log('ObservationModal: Type de hookResult:', typeof hookResult);
+  console.log('ObservationModal: Clés disponibles:', hookResult ? Object.keys(hookResult) : 'hookResult est null/undefined');
+
+  const { createNewObservation, isLoading } = hookResult || {};
+  console.log('ObservationModal: createNewObservation:', createNewObservation);
+  console.log('ObservationModal: Type de createNewObservation:', typeof createNewObservation);
+
   const speciesInputRef = useRef<TextInput>(null);
 
   const [formData, setFormData] = useState({
@@ -46,8 +56,14 @@ export default function ObservationModal() {
       return;
     }
 
+    if (!createNewObservation) {
+      Alert.alert('Erreur', 'Le système de création d\'observation n\'est pas encore prêt. Veuillez réessayer dans un moment.');
+      return;
+    }
+
     try {
       console.log('Tentative de création d\'observation:', { latitude, longitude, species: formData.species });
+      console.log('createNewObservation disponible:', !!createNewObservation);
 
       const observationData: CreateObservationDto = {
         species: formData.species.trim(),
@@ -133,12 +149,12 @@ export default function ObservationModal() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+                  style={[styles.submitButton, (isLoading || !createNewObservation) && styles.submitButtonDisabled]}
                   onPress={handleSubmit}
-                  disabled={isLoading}
+                  disabled={isLoading || !createNewObservation}
                 >
                   <Text style={styles.submitButtonText}>
-                    {isLoading ? 'Création...' : 'Créer l\'observation'}
+                    {isLoading ? 'Création...' : !createNewObservation ? 'Chargement...' : 'Créer l\'observation'}
                   </Text>
                 </TouchableOpacity>
               </View>
