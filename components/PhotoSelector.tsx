@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Image,
 } from 'react-native';
 
@@ -13,12 +12,6 @@ interface PhotoSelectorProps {
   onTakePhoto: () => void;
 }
 
-const availableImages = [
-  { id: 'raccoon', source: require("../assets/images/raccoon.png") },
-  { id: 'fleur1', source: require("../assets/images/thumb_fleur-printemps-rose-6153.jpg") },
-  { id: 'fleur2', source: require("../assets/images/osteospermum-istock.jpg") },
-  { id: 'fleur3', source: require("../assets/images/QJ2GDGC4DZFIRLOR4XYNNVENQA.jpg") },
-];
 
 const getImageSource = (photoUri: string) => {
   if (photoUri.startsWith('asset://raccoon')) return require("../assets/images/raccoon.png");
@@ -34,7 +27,6 @@ export const PhotoSelector: React.FC<PhotoSelectorProps> = ({
   onTakePhoto,
 }) => {
   const handlePress = () => {
-    console.log('PhotoSelector: Clic détecté');
     onTakePhoto();
   };
 

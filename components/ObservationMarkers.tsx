@@ -4,8 +4,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
-  runOnJS
+  withTiming
 } from 'react-native-reanimated';
 import Mapbox from "@rnmapbox/maps";
 import { Observation } from '../types/observation';
@@ -21,7 +20,6 @@ const AnimatedMarker: React.FC<AnimatedMarkerProps> = ({ observation, onPress })
   const translateY = useSharedValue(-20);
 
   useEffect(() => {
-    // Délai de 1500ms pour bien voir l'animation
     const timer = setTimeout(() => {
       scale.value = withSpring(1, {
         damping: 12,

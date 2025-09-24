@@ -29,15 +29,9 @@ export const MapScreen: React.FC<MapScreenProps> = ({ location }) => {
   const router = useRouter();
   const { observations, loadObservations } = useObservationsStore();
 
-  console.log("MapScreen: Nombre d'observations:", observations.length);
-  console.log(
-    "MapScreen: Observations:",
-    observations.map((o) => ({ id: o.id, species: o.species }))
-  );
 
   useFocusEffect(
     useCallback(() => {
-      console.log("MapScreen: Focus effet - rechargement des observations");
       loadObservations();
     }, [loadObservations])
   );

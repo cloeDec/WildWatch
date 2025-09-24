@@ -25,14 +25,7 @@ export default function ObservationModal() {
     observationId?: string;
   }>();
 
-  console.log("ObservationModal: Appel de useObservationsStore...");
   const hookResult = useObservationsStore();
-  console.log("ObservationModal: Résultat du hook simple:", hookResult);
-  console.log("ObservationModal: Type de hookResult:", typeof hookResult);
-  console.log(
-    "ObservationModal: Clés disponibles:",
-    hookResult ? Object.keys(hookResult) : "hookResult est null/undefined"
-  );
 
   const {
     createNewObservation,
@@ -41,11 +34,6 @@ export default function ObservationModal() {
     observations,
     isLoading,
   } = hookResult || {};
-  console.log("ObservationModal: createNewObservation:", createNewObservation);
-  console.log(
-    "ObservationModal: Type de createNewObservation:",
-    typeof createNewObservation
-  );
 
   const [formData, setFormData] = useState({
     species: "",
@@ -66,10 +54,6 @@ export default function ObservationModal() {
     ? observations?.find((obs) => obs.id === observationId)
     : null;
 
-  console.log("ObservationModal: isEditing =", isEditing);
-  console.log("ObservationModal: observationId =", observationId);
-  console.log("ObservationModal: observations count =", observations?.length);
-  console.log("ObservationModal: existingObservation =", existingObservation);
 
   useEffect(() => {
     if (isEditing && existingObservation) {
@@ -91,7 +75,6 @@ export default function ObservationModal() {
   };
 
   const handleTakePhoto = async () => {
-    console.log("handleTakePhoto: Début de la prise de photo");
 
     Alert.alert(
       "Choisir une photo",
@@ -106,20 +89,16 @@ export default function ObservationModal() {
 
   const handleLaunchCamera = async () => {
     try {
-      console.log("handleLaunchCamera: Mode simulation activé");
       const simulatedPhotoUri = `camera://simulation_${Date.now()}`;
       setPhotoUri(simulatedPhotoUri);
-      console.log("Photo simulée prise:", simulatedPhotoUri);
 
       Alert.alert("Simulation", "Photo simulée prise avec la caméra!");
     } catch (error) {
-      console.error("Erreur simulation caméra:", error);
       Alert.alert("Erreur", "Impossible de simuler la caméra");
     }
   };
 
   const handlePickFromGallery = async () => {
-    console.log("handlePickFromGallery: Ouverture du sélecteur d'images");
     setIsImageSelectorOpen(true);
   };
 
@@ -127,7 +106,6 @@ export default function ObservationModal() {
     const imageUri = `asset://${imageData.id}`;
     setPhotoUri(imageUri);
     setIsImageSelectorOpen(false);
-    console.log("Image sélectionnée:", imageData.id);
   };
 
   const handleDateConfirm = (selectedDate: Date) => {
@@ -144,12 +122,8 @@ export default function ObservationModal() {
   };
 
   const handleDelete = async () => {
-    console.log("handleDelete: isEditing =", isEditing);
-    console.log("handleDelete: observationId =", observationId);
-    console.log("handleDelete: deleteObservation =", deleteObservation);
 
     if (!isEditing || !observationId || !deleteObservation) {
-      console.log("handleDelete: Conditions non remplies, arrêt");
       return;
     }
 
@@ -163,18 +137,12 @@ export default function ObservationModal() {
           style: "destructive",
           onPress: async () => {
             try {
-              console.log(
-                "Tentative de suppression d'observation:",
-                observationId
-              );
               await deleteObservation(observationId);
-              console.log("Observation supprimée:", observationId);
 
               Alert.alert("Succès", "Observation supprimée avec succès !", [
                 { text: "OK", onPress: handleClose },
               ]);
             } catch (error) {
-              console.error("Erreur lors de la suppression:", error);
               Alert.alert(
                 "Erreur",
                 `Impossible de supprimer l'observation: ${
@@ -204,10 +172,6 @@ export default function ObservationModal() {
 
     try {
       if (isEditing && existingObservation && updateObservation) {
-        console.log("Tentative de modification d'observation:", {
-          id: observationId,
-          species: formData.species,
-        });
 
         const updatedObservation = {
           ...existingObservation,
@@ -218,17 +182,11 @@ export default function ObservationModal() {
         };
 
         await updateObservation(updatedObservation);
-        console.log("Observation modifiée:", updatedObservation);
 
         Alert.alert("Succès", "Observation modifiée avec succès !", [
           { text: "OK", onPress: handleClose },
         ]);
       } else if (!isEditing && createNewObservation) {
-        console.log("Tentative de création d'observation:", {
-          latitude,
-          longitude,
-          species: formData.species,
-        });
 
         const observationData: CreateObservationDto = {
           species: formData.species.trim(),
@@ -238,15 +196,13 @@ export default function ObservationModal() {
           photos: photoUri ? [photoUri] : undefined,
         };
 
-        const newObservation = await createNewObservation(observationData);
-        console.log("Observation créée:", newObservation);
+        await createNewObservation(observationData);
 
         Alert.alert("Succès", "Observation créée avec succès !", [
           { text: "OK", onPress: handleClose },
         ]);
       }
     } catch (error) {
-      console.error("Erreur lors de la sauvegarde:", error);
       const action = isEditing ? "modifier" : "créer";
       Alert.alert(
         "Erreur",
@@ -385,158 +341,5 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
     alignItems: "center",
-  },
-  photoSection: {
-    alignItems: "center",
-    marginBottom: 30,
-  },
-  photoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#f5f5f5",
-    borderWidth: 2,
-    borderColor: "#e0e0e0",
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  photoImage: {
-    width: "100%",
-    height: "100%",
-  },
-  photoPlaceholder: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  photoPlaceholderText: {
-    fontSize: 30,
-    marginBottom: 5,
-  },
-  photoPlaceholderSubtext: {
-    fontSize: 12,
-    color: "#666",
-    textAlign: "center",
-  },
-  formGroup: {
-    marginBottom: 20,
-    width: "100%",
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1a1a1a",
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#dee2e6",
-    borderRadius: 12,
-    padding: 15,
-    fontSize: 16,
-    color: "#1a1a1a",
-    backgroundColor: "#f8f9fa",
-  },
-  textArea: {
-    height: 100,
-    paddingTop: 15,
-  },
-  buttonContainer: {
-    width: "100%",
-    gap: 12,
-    paddingTop: 20,
-    paddingBottom: 20,
-  },
-  saveButton: {
-    paddingVertical: 15,
-    borderRadius: 25,
-    backgroundColor: "#007AFF",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  saveButtonDisabled: {
-    backgroundColor: "#ccc",
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "white",
-  },
-  deleteButton: {
-    paddingVertical: 15,
-    borderRadius: 25,
-    backgroundColor: "#FF3B30",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  deleteButtonDisabled: {
-    backgroundColor: "#ccc",
-  },
-  deleteButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "white",
-  },
-  cancelButton: {
-    paddingVertical: 15,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#666",
-  },
-  dateText: {
-    fontSize: 16,
-    color: "#1a1a1a",
-  },
-  imageSelectorOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  imageSelectorContainer: {
-    backgroundColor: "white",
-    borderRadius: 20,
-    margin: 20,
-    maxHeight: "70%",
-    minWidth: "80%",
-  },
-  imageSelectorHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e9ecef",
-  },
-  imageSelectorTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1a1a1a",
-  },
-  imageGrid: {
-    padding: 20,
-  },
-  imageOption: {
-    flex: 1,
-    margin: 5,
-    alignItems: "center",
-    backgroundColor: "#f8f9fa",
-    borderRadius: 10,
-    padding: 10,
-  },
-  imageOptionImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
-    marginBottom: 5,
-  },
-  imageOptionText: {
-    fontSize: 12,
-    color: "#666",
-    textAlign: "center",
   },
 });
