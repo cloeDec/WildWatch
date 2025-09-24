@@ -26,7 +26,7 @@ export default function ObservationModal() {
   console.log('ObservationModal: Type de hookResult:', typeof hookResult);
   console.log('ObservationModal: Clés disponibles:', hookResult ? Object.keys(hookResult) : 'hookResult est null/undefined');
 
-  const { createNewObservation, updateObservation, observations, isLoading } = hookResult || {};
+  const { createNewObservation, updateObservation, deleteObservation, observations, isLoading } = hookResult || {};
   console.log('ObservationModal: createNewObservation:', createNewObservation);
   console.log('ObservationModal: Type de createNewObservation:', typeof createNewObservation);
 
@@ -48,6 +48,11 @@ export default function ObservationModal() {
 
   // Trouver l'observation à éditer si on est en mode édition
   const existingObservation = isEditing ? observations?.find(obs => obs.id === observationId) : null;
+
+  console.log('ObservationModal: isEditing =', isEditing);
+  console.log('ObservationModal: observationId =', observationId);
+  console.log('ObservationModal: observations count =', observations?.length);
+  console.log('ObservationModal: existingObservation =', existingObservation);
 
   // Initialiser les données du formulaire si on édite une observation existante
   useEffect(() => {
@@ -155,6 +160,43 @@ export default function ObservationModal() {
 
   const handleDateCancel = () => {
     setIsDatePickerOpen(false);
+  };
+
+  const handleDelete = async () => {
+    console.log('handleDelete: isEditing =', isEditing);
+    console.log('handleDelete: observationId =', observationId);
+    console.log('handleDelete: deleteObservation =', deleteObservation);
+
+    if (!isEditing || !observationId || !deleteObservation) {
+      console.log('handleDelete: Conditions non remplies, arrêt');
+      return;
+    }
+
+    Alert.alert(
+      'Supprimer l\'observation',
+      'Êtes-vous sûr de vouloir supprimer cette observation ? Cette action est irréversible.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('Tentative de suppression d\'observation:', observationId);
+              await deleteObservation(observationId);
+              console.log('Observation supprimée:', observationId);
+
+              Alert.alert('Succès', 'Observation supprimée avec succès !', [
+                { text: 'OK', onPress: handleClose },
+              ]);
+            } catch (error) {
+              console.error('Erreur lors de la suppression:', error);
+              Alert.alert('Erreur', `Impossible de supprimer l'observation: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleSubmit = async () => {
@@ -283,9 +325,17 @@ export default function ObservationModal() {
                   </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.deleteButton} onPress={handleClose}>
-                  <Text style={styles.deleteButtonText}>Supprimer</Text>
-                </TouchableOpacity>
+                {isEditing && (
+                  <TouchableOpacity
+                    style={[styles.deleteButton, isLoading && styles.deleteButtonDisabled]}
+                    onPress={handleDelete}
+                    disabled={isLoading}
+                  >
+                    <Text style={styles.deleteButtonText}>
+                      {isLoading ? 'Suppression...' : 'Supprimer'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
                 <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
                   <Text style={styles.cancelButtonText}>Annuler</Text>
@@ -442,6 +492,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF3B30',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  deleteButtonDisabled: {
+    backgroundColor: '#ccc',
   },
   deleteButtonText: {
     fontSize: 16,

@@ -1,8 +1,8 @@
 import Mapbox from "@rnmapbox/maps";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
-import React, { useEffect, useRef } from "react";
-import { Dimensions, Image, StyleSheet, View } from "react-native";
+import { useRouter, useFocusEffect } from "expo-router";
+import React, { useEffect, useRef, useCallback } from "react";
+import { Dimensions, Image, StyleSheet, TouchableOpacity, View } from "react-native";
 import { MAPBOX_CONFIG } from "../config/env";
 import { useObservationsStore } from "../hooks/useObservationsStore";
 
@@ -23,12 +23,20 @@ const { width, height } = Dimensions.get("window");
 export const MapScreen: React.FC<MapScreenProps> = ({ location }) => {
   const cameraRef = useRef<Mapbox.Camera>(null);
   const router = useRouter();
-  const { observations } = useObservationsStore();
+  const { observations, loadObservations } = useObservationsStore();
 
   console.log("MapScreen: Nombre d'observations:", observations.length);
   console.log(
     "MapScreen: Observations:",
     observations.map((o) => ({ id: o.id, species: o.species }))
+  );
+
+  // Recharger les observations quand la carte devient visible
+  useFocusEffect(
+    useCallback(() => {
+      console.log('MapScreen: Focus effet - rechargement des observations');
+      loadObservations();
+    }, [loadObservations])
   );
 
   useEffect(() => {
@@ -109,12 +117,12 @@ export const MapScreen: React.FC<MapScreenProps> = ({ location }) => {
           androidRenderMode="gps"
           requestsAlwaysUse={false}
         />
-        <Mapbox.PointAnnotation id="user-position" coordinate={coordinates}>
+        <Mapbox.MarkerView id="user-position" coordinate={coordinates}>
           <View style={styles.markerContainer}>
             <View style={styles.markerInner} />
             <View style={styles.markerOuter} />
           </View>
-        </Mapbox.PointAnnotation>
+        </Mapbox.MarkerView>
 
         {observations.map((observation) => {
           console.log(
@@ -125,14 +133,17 @@ export const MapScreen: React.FC<MapScreenProps> = ({ location }) => {
             observation.longitude
           );
           return (
-            <Mapbox.PointAnnotation
+            <Mapbox.MarkerView
               key={observation.id}
               id={`observation-${observation.id}`}
               coordinate={[observation.longitude, observation.latitude]}
               anchor={{ x: 0.5, y: 1 }}
-              onSelected={() => handleObservationPress(observation)}
             >
-              <View style={styles.observationDropletPin}>
+              <TouchableOpacity
+                style={styles.observationDropletPin}
+                onPress={() => handleObservationPress(observation)}
+                activeOpacity={0.7}
+              >
                 <View style={styles.pinShadow} />
                 <View style={styles.dropletShape}>
                   <View style={styles.dropletTop}>
@@ -145,8 +156,8 @@ export const MapScreen: React.FC<MapScreenProps> = ({ location }) => {
                   <View style={styles.dropletNeck} />
                   <View style={styles.dropletTip} />
                 </View>
-              </View>
-            </Mapbox.PointAnnotation>
+              </TouchableOpacity>
+            </Mapbox.MarkerView>
           );
         })}
         {location.coords.accuracy && (

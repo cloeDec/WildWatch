@@ -99,6 +99,35 @@ export const useObservationsStore = () => {
     }
   }, []);
 
+  const deleteObservation = useCallback(async (observationId: string) => {
+    console.log('useObservationsStore: deleteObservation appelée');
+    console.log('useObservationsStore: ID reçu:', observationId);
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Simuler un délai d'API
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      console.log('useObservationsStore: Suppression de l\'observation:', observationId);
+
+      // Supprimer du store global
+      observationsStore.deleteObservation(observationId);
+
+      console.log('useObservationsStore: Store stats:', observationsStore.getStats());
+
+      return true;
+    } catch (error) {
+      console.error('useObservationsStore: Erreur:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const loadObservations = useCallback(() => {
     const currentObservations = observationsStore.getObservations();
     setObservations(currentObservations);
@@ -111,6 +140,7 @@ export const useObservationsStore = () => {
     error,
     createNewObservation,
     updateObservation,
+    deleteObservation,
     loadObservations,
   };
 };

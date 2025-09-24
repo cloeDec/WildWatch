@@ -24,6 +24,20 @@ class ObservationsStore {
     }
   }
 
+  // Supprimer une observation
+  deleteObservation(observationId: string) {
+    console.log('ObservationsStore: Suppression observation:', observationId);
+    const initialLength = this.observations.length;
+    this.observations = this.observations.filter(obs => obs.id !== observationId);
+
+    if (this.observations.length < initialLength) {
+      this.notifyListeners();
+      console.log('ObservationsStore: Observation supprimée avec succès');
+    } else {
+      console.warn('ObservationsStore: Observation non trouvée pour suppression:', observationId);
+    }
+  }
+
   // Obtenir toutes les observations
   getObservations(): Observation[] {
     return [...this.observations];
