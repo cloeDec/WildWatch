@@ -1,7 +1,87 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS
+} from 'react-native-reanimated';
 import Mapbox from "@rnmapbox/maps";
 import { Observation } from '../types/observation';
+
+interface AnimatedMarkerProps {
+  observation: Observation;
+  onPress: (observation: Observation) => void;
+}
+
+const AnimatedMarker: React.FC<AnimatedMarkerProps> = ({ observation, onPress }) => {
+  const scale = useSharedValue(0);
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(-20);
+
+  useEffect(() => {
+    // Délai de 1500ms pour bien voir l'animation
+    const timer = setTimeout(() => {
+      scale.value = withSpring(1, {
+        damping: 12,
+        stiffness: 100,
+        mass: 0.8
+      });
+
+      opacity.value = withTiming(1, {
+        duration: 600
+      });
+
+      translateY.value = withSpring(0, {
+        damping: 15,
+        stiffness: 150
+      });
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { scale: scale.value },
+        { translateY: translateY.value }
+      ],
+      opacity: opacity.value,
+    };
+  });
+
+  return (
+    <Mapbox.MarkerView
+      key={observation.id}
+      id={`observation-${observation.id}`}
+      coordinate={[observation.longitude, observation.latitude]}
+      anchor={{ x: 0.5, y: 1 }}
+    >
+      <Animated.View style={[styles.animatedContainer, animatedStyle]}>
+        <TouchableOpacity
+          style={styles.observationDropletPin}
+          onPress={() => onPress(observation)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.pinShadow} />
+          <View style={styles.dropletShape}>
+            <View style={styles.dropletTop}>
+              <Image
+                source={require("../assets/images/raccoon.png")}
+                style={styles.dropletImage}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.dropletNeck} />
+            <View style={styles.dropletTip} />
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    </Mapbox.MarkerView>
+  );
+};
 
 interface ObservationMarkersProps {
   observations: Observation[];
@@ -14,47 +94,22 @@ export const ObservationMarkers: React.FC<ObservationMarkersProps> = ({
 }) => {
   return (
     <>
-      {observations.map((observation) => {
-        console.log(
-          "ObservationMarkers: Rendu pin pour observation:",
-          observation.id,
-          "à",
-          observation.latitude,
-          observation.longitude
-        );
-        return (
-          <Mapbox.MarkerView
-            key={observation.id}
-            id={`observation-${observation.id}`}
-            coordinate={[observation.longitude, observation.latitude]}
-            anchor={{ x: 0.5, y: 1 }}
-          >
-            <TouchableOpacity
-              style={styles.observationDropletPin}
-              onPress={() => onObservationPress(observation)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.pinShadow} />
-              <View style={styles.dropletShape}>
-                <View style={styles.dropletTop}>
-                  <Image
-                    source={require("../assets/images/raccoon.png")}
-                    style={styles.dropletImage}
-                    resizeMode="contain"
-                  />
-                </View>
-                <View style={styles.dropletNeck} />
-                <View style={styles.dropletTip} />
-              </View>
-            </TouchableOpacity>
-          </Mapbox.MarkerView>
-        );
-      })}
+      {observations.map((observation) => (
+        <AnimatedMarker
+          key={observation.id}
+          observation={observation}
+          onPress={onObservationPress}
+        />
+      ))}
     </>
   );
 };
 
 const styles = StyleSheet.create({
+  animatedContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   observationDropletPin: {
     alignItems: 'center',
     justifyContent: 'flex-start',

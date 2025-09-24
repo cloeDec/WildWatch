@@ -32,7 +32,6 @@ export const ObservationForm: React.FC<ObservationFormProps> = ({
 
   return (
     <>
-      {/* Champ Nom (espèce) */}
       <View style={styles.formGroup}>
         <Text style={styles.label}>Nom</Text>
         <TextInput
@@ -46,7 +45,6 @@ export const ObservationForm: React.FC<ObservationFormProps> = ({
         />
       </View>
 
-      {/* Champ Date d'observation */}
       <View style={styles.formGroup}>
         <Text style={styles.label}>Date d'observation</Text>
         <TouchableOpacity
