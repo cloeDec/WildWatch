@@ -68,6 +68,17 @@ export const MapScreen: React.FC<MapScreenProps> = ({ location }) => {
     }
   };
 
+  const handleObservationPress = (observation: any) => {
+    router.push({
+      pathname: "/observationModal",
+      params: {
+        observationId: observation.id,
+        latitude: observation.latitude.toString(),
+        longitude: observation.longitude.toString(),
+      },
+    });
+  };
+
   return (
     <View style={styles.container}>
       <Mapbox.MapView
@@ -119,6 +130,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ location }) => {
               id={`observation-${observation.id}`}
               coordinate={[observation.longitude, observation.latitude]}
               anchor={{ x: 0.5, y: 1 }}
+              onSelected={() => handleObservationPress(observation)}
             >
               <View style={styles.observationDropletPin}>
                 <View style={styles.pinShadow} />

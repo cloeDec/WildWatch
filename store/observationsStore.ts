@@ -12,6 +12,18 @@ class ObservationsStore {
     this.notifyListeners();
   }
 
+  // Mettre à jour une observation
+  updateObservation(updatedObservation: Observation) {
+    console.log('ObservationsStore: Mise à jour observation:', updatedObservation.id);
+    const index = this.observations.findIndex(obs => obs.id === updatedObservation.id);
+    if (index !== -1) {
+      this.observations[index] = updatedObservation;
+      this.notifyListeners();
+    } else {
+      console.warn('ObservationsStore: Observation non trouvée pour mise à jour:', updatedObservation.id);
+    }
+  }
+
   // Obtenir toutes les observations
   getObservations(): Observation[] {
     return [...this.observations];

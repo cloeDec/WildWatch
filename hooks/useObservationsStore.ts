@@ -70,6 +70,35 @@ export const useObservationsStore = () => {
     }
   }, []);
 
+  const updateObservation = useCallback(async (observationData: Observation) => {
+    console.log('useObservationsStore: updateObservation appelée');
+    console.log('useObservationsStore: Données reçues:', observationData);
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Simuler un délai d'API
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      console.log('useObservationsStore: Observation modifiée:', observationData);
+
+      // Mettre à jour dans le store global
+      observationsStore.updateObservation(observationData);
+
+      console.log('useObservationsStore: Store stats:', observationsStore.getStats());
+
+      return observationData;
+    } catch (error) {
+      console.error('useObservationsStore: Erreur:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const loadObservations = useCallback(() => {
     const currentObservations = observationsStore.getObservations();
     setObservations(currentObservations);
@@ -81,6 +110,7 @@ export const useObservationsStore = () => {
     isLoading,
     error,
     createNewObservation,
+    updateObservation,
     loadObservations,
   };
 };

@@ -18,7 +18,7 @@ import { CreateObservationDto } from '../types/observation';
 
 export default function ObservationModal() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ latitude?: string; longitude?: string }>();
+  const params = useLocalSearchParams<{ latitude?: string; longitude?: string; observationId?: string }>();
 
   console.log('ObservationModal: Appel de useObservationsStore...');
   const hookResult = useObservationsStore();
@@ -26,7 +26,7 @@ export default function ObservationModal() {
   console.log('ObservationModal: Type de hookResult:', typeof hookResult);
   console.log('ObservationModal: Clés disponibles:', hookResult ? Object.keys(hookResult) : 'hookResult est null/undefined');
 
-  const { createNewObservation, isLoading } = hookResult || {};
+  const { createNewObservation, updateObservation, observations, isLoading } = hookResult || {};
   console.log('ObservationModal: createNewObservation:', createNewObservation);
   console.log('ObservationModal: Type de createNewObservation:', typeof createNewObservation);
 
@@ -43,6 +43,25 @@ export default function ObservationModal() {
 
   const latitude = params.latitude ? parseFloat(params.latitude) : 0;
   const longitude = params.longitude ? parseFloat(params.longitude) : 0;
+  const observationId = params.observationId;
+  const isEditing = !!observationId;
+
+  // Trouver l'observation à éditer si on est en mode édition
+  const existingObservation = isEditing ? observations?.find(obs => obs.id === observationId) : null;
+
+  // Initialiser les données du formulaire si on édite une observation existante
+  useEffect(() => {
+    if (isEditing && existingObservation) {
+      setFormData({
+        species: existingObservation.species,
+        observationDate: new Date(existingObservation.timestamp).toISOString().split('T')[0],
+      });
+      setDate(new Date(existingObservation.timestamp));
+      if (existingObservation.photos && existingObservation.photos.length > 0) {
+        setPhotoUri(existingObservation.photos[0]);
+      }
+    }
+  }, [isEditing, existingObservation]);
 
   // Focus automatique sur le champ espèce au montage de la modale (optimisé pour Android)
   useEffect(() => {
@@ -144,34 +163,53 @@ export default function ObservationModal() {
       return;
     }
 
-    if (!createNewObservation) {
-      Alert.alert('Erreur', 'Le système de création d\'observation n\'est pas encore prêt. Veuillez réessayer dans un moment.');
+    if (!createNewObservation && !updateObservation) {
+      Alert.alert('Erreur', 'Le système n\'est pas encore prêt. Veuillez réessayer dans un moment.');
       return;
     }
 
     try {
-      console.log('Tentative de création d\'observation:', { latitude, longitude, species: formData.species });
-      console.log('createNewObservation disponible:', !!createNewObservation);
+      if (isEditing && existingObservation && updateObservation) {
+        // Mode édition
+        console.log('Tentative de modification d\'observation:', { id: observationId, species: formData.species });
 
-      const observationData: CreateObservationDto = {
-        species: formData.species.trim(),
-        latitude,
-        longitude,
-        accuracy: 5, // Default accuracy
-        photos: photoUri ? [photoUri] : undefined,
-      };
+        const updatedObservation = {
+          ...existingObservation,
+          species: formData.species.trim(),
+          timestamp: date.getTime(),
+          updatedAt: Date.now(),
+          photos: photoUri ? [photoUri] : existingObservation.photos,
+        };
 
-      console.log('Données de l\'observation:', observationData);
+        await updateObservation(updatedObservation);
+        console.log('Observation modifiée:', updatedObservation);
 
-      const newObservation = await createNewObservation(observationData);
-      console.log('Observation créée:', newObservation);
+        Alert.alert('Succès', 'Observation modifiée avec succès !', [
+          { text: 'OK', onPress: handleClose },
+        ]);
+      } else if (!isEditing && createNewObservation) {
+        // Mode création
+        console.log('Tentative de création d\'observation:', { latitude, longitude, species: formData.species });
 
-      Alert.alert('Succès', 'Observation créée avec succès !', [
-        { text: 'OK', onPress: handleClose },
-      ]);
+        const observationData: CreateObservationDto = {
+          species: formData.species.trim(),
+          latitude,
+          longitude,
+          accuracy: 5, // Default accuracy
+          photos: photoUri ? [photoUri] : undefined,
+        };
+
+        const newObservation = await createNewObservation(observationData);
+        console.log('Observation créée:', newObservation);
+
+        Alert.alert('Succès', 'Observation créée avec succès !', [
+          { text: 'OK', onPress: handleClose },
+        ]);
+      }
     } catch (error) {
-      console.error('Erreur lors de la création:', error);
-      Alert.alert('Erreur', `Impossible de créer l'observation: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      console.error('Erreur lors de la sauvegarde:', error);
+      const action = isEditing ? 'modifier' : 'créer';
+      Alert.alert('Erreur', `Impossible de ${action} l'observation: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     }
   };
 
@@ -181,7 +219,7 @@ export default function ObservationModal() {
         <TouchableOpacity style={styles.overlay} onPress={handleClose} activeOpacity={1}>
           <TouchableOpacity style={styles.modalContainer} activeOpacity={1}>
             <View style={styles.header}>
-              <Text style={styles.title}>Nouvelle Observation</Text>
+              <Text style={styles.title}>{isEditing ? 'Modifier Observation' : 'Nouvelle Observation'}</Text>
               <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
                 <Text style={styles.closeButtonText}>✕</Text>
               </TouchableOpacity>
@@ -236,12 +274,12 @@ export default function ObservationModal() {
 
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
-                  style={[styles.saveButton, (isLoading || !createNewObservation) && styles.saveButtonDisabled]}
+                  style={[styles.saveButton, (isLoading || (!createNewObservation && !updateObservation)) && styles.saveButtonDisabled]}
                   onPress={handleSubmit}
-                  disabled={isLoading || !createNewObservation}
+                  disabled={isLoading || (!createNewObservation && !updateObservation)}
                 >
                   <Text style={styles.saveButtonText}>
-                    {isLoading ? 'Enregistrement...' : !createNewObservation ? 'Chargement...' : 'Enregistrer'}
+                    {isLoading ? 'Enregistrement...' : (!createNewObservation && !updateObservation) ? 'Chargement...' : 'Enregistrer'}
                   </Text>
                 </TouchableOpacity>
 
