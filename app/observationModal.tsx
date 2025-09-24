@@ -9,6 +9,7 @@ import {
   ScrollView,
   Modal,
   Image,
+  FlatList,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -34,19 +35,26 @@ export default function ObservationModal() {
 
   const [formData, setFormData] = useState({
     species: '',
-    observationDate: new Date().toISOString().split('T')[0], // Format YYYY-MM-DD
+    observationDate: new Date().toISOString().split('T')[0],
   });
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [date, setDate] = useState(new Date());
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
+
+  const availableImages = [
+    { id: 'raccoon', source: require("../assets/images/raccoon.png") },
+    { id: 'fleur1', source: require("../assets/images/thumb_fleur-printemps-rose-6153.jpg") },
+    { id: 'fleur2', source: require("../assets/images/osteospermum-istock.jpg") },
+    { id: 'fleur3', source: require("../assets/images/QJ2GDGC4DZFIRLOR4XYNNVENQA.jpg") },
+  ];
 
   const latitude = params.latitude ? parseFloat(params.latitude) : 0;
   const longitude = params.longitude ? parseFloat(params.longitude) : 0;
   const observationId = params.observationId;
   const isEditing = !!observationId;
 
-  // Trouver l'observation à éditer si on est en mode édition
   const existingObservation = isEditing ? observations?.find(obs => obs.id === observationId) : null;
 
   console.log('ObservationModal: isEditing =', isEditing);
@@ -54,7 +62,6 @@ export default function ObservationModal() {
   console.log('ObservationModal: observations count =', observations?.length);
   console.log('ObservationModal: existingObservation =', existingObservation);
 
-  // Initialiser les données du formulaire si on édite une observation existante
   useEffect(() => {
     if (isEditing && existingObservation) {
       setFormData({
@@ -68,7 +75,6 @@ export default function ObservationModal() {
     }
   }, [isEditing, existingObservation]);
 
-  // Focus automatique sur le champ espèce au montage de la modale (optimisé pour Android)
   useEffect(() => {
     const timer = setTimeout(() => {
       speciesInputRef.current?.focus();
@@ -82,71 +88,43 @@ export default function ObservationModal() {
   };
 
   const handleTakePhoto = async () => {
-    try {
-      console.log('handleTakePhoto: Début de la prise de photo');
+    console.log('handleTakePhoto: Début de la prise de photo');
 
-      // Demander les permissions pour la caméra
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      console.log('handleTakePhoto: Status permission:', status);
-
-      if (status !== 'granted') {
-        Alert.alert('Permission requise', 'Nous avons besoin de votre permission pour accéder à la caméra.');
-        return;
-      }
-
-      // Proposer choix entre caméra et galerie
-      Alert.alert(
-        'Choisir une photo',
-        'Comment voulez-vous ajouter une photo ?',
-        [
-          { text: 'Annuler', style: 'cancel' },
-          { text: 'Galerie', onPress: handlePickFromGallery },
-          { text: 'Caméra', onPress: handleLaunchCamera },
-        ]
-      );
-    } catch (error) {
-      console.error('Erreur lors de la prise de photo:', error);
-      Alert.alert('Erreur', 'Module caméra non disponible. Utilisez la galerie à la place.');
-      handlePickFromGallery();
-    }
+    Alert.alert(
+      'Choisir une photo',
+      'Comment voulez-vous ajouter une photo ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Galerie', onPress: handlePickFromGallery },
+        { text: 'Caméra', onPress: handleLaunchCamera },
+      ]
+    );
   };
 
   const handleLaunchCamera = async () => {
     try {
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
+      console.log('handleLaunchCamera: Mode simulation activé');
+      const simulatedPhotoUri = `camera://simulation_${Date.now()}`;
+      setPhotoUri(simulatedPhotoUri);
+      console.log('Photo simulée prise:', simulatedPhotoUri);
 
-      if (!result.canceled && result.assets[0]) {
-        setPhotoUri(result.assets[0].uri);
-        console.log('Photo prise:', result.assets[0].uri);
-      }
+      Alert.alert('Simulation', 'Photo simulée prise avec la caméra!');
     } catch (error) {
-      console.error('Erreur caméra:', error);
-      Alert.alert('Erreur', 'Caméra non disponible. Essayez la galerie.');
+      console.error('Erreur simulation caméra:', error);
+      Alert.alert('Erreur', 'Impossible de simuler la caméra');
     }
   };
 
   const handlePickFromGallery = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
+    console.log('handlePickFromGallery: Ouverture du sélecteur d\'images');
+    setIsImageSelectorOpen(true);
+  };
 
-      if (!result.canceled && result.assets[0]) {
-        setPhotoUri(result.assets[0].uri);
-        console.log('Photo sélectionnée:', result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Erreur galerie:', error);
-      Alert.alert('Erreur', 'Impossible d\'accéder à la galerie');
-    }
+  const handleSelectImage = (imageData: { id: string; source: any }) => {
+    const imageUri = `asset://${imageData.id}`;
+    setPhotoUri(imageUri);
+    setIsImageSelectorOpen(false);
+    console.log('Image sélectionnée:', imageData.id);
   };
 
   const handleDateConfirm = (selectedDate: Date) => {
@@ -212,7 +190,6 @@ export default function ObservationModal() {
 
     try {
       if (isEditing && existingObservation && updateObservation) {
-        // Mode édition
         console.log('Tentative de modification d\'observation:', { id: observationId, species: formData.species });
 
         const updatedObservation = {
@@ -230,14 +207,13 @@ export default function ObservationModal() {
           { text: 'OK', onPress: handleClose },
         ]);
       } else if (!isEditing && createNewObservation) {
-        // Mode création
         console.log('Tentative de création d\'observation:', { latitude, longitude, species: formData.species });
 
         const observationData: CreateObservationDto = {
           species: formData.species.trim(),
           latitude,
           longitude,
-          accuracy: 5, // Default accuracy
+          accuracy: 5,
           photos: photoUri ? [photoUri] : undefined,
         };
 
@@ -270,14 +246,30 @@ export default function ObservationModal() {
             <ScrollView
               style={styles.content}
               showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
+              keyboardShouldPersistTaps="always"
               contentContainerStyle={styles.scrollContent}
             >
-              {/* Zone photo circulaire */}
               <View style={styles.photoSection}>
-                <TouchableOpacity style={styles.photoContainer} onPress={handleTakePhoto}>
+                <TouchableOpacity
+                  style={styles.photoContainer}
+                  onPress={() => {
+                    console.log('TouchableOpacity photo: Clic détecté');
+                    handleTakePhoto();
+                  }}
+                  activeOpacity={0.7}
+                >
                   {photoUri ? (
-                    <Image source={{ uri: photoUri }} style={styles.photoImage} />
+                    <Image
+                      source={
+                        photoUri.startsWith('asset://raccoon') ? require("../assets/images/raccoon.png") :
+                        photoUri.startsWith('asset://fleur1') ? require("../assets/images/thumb_fleur-printemps-rose-6153.jpg") :
+                        photoUri.startsWith('asset://fleur2') ? require("../assets/images/osteospermum-istock.jpg") :
+                        photoUri.startsWith('asset://fleur3') ? require("../assets/images/QJ2GDGC4DZFIRLOR4XYNNVENQA.jpg") :
+                        photoUri.startsWith('camera://simulation') ? require("../assets/images/raccoon.png") :
+                        { uri: photoUri }
+                      }
+                      style={styles.photoImage}
+                    />
                   ) : (
                     <View style={styles.photoPlaceholder}>
                       <Text style={styles.photoPlaceholderText}>📷</Text>
@@ -286,8 +278,6 @@ export default function ObservationModal() {
                   )}
                 </TouchableOpacity>
               </View>
-
-              {/* Champ Nom (espèce) */}
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Nom</Text>
                 <TextInput
@@ -300,8 +290,6 @@ export default function ObservationModal() {
                   autoFocus={true}
                 />
               </View>
-
-              {/* Champ Date d'observation */}
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Date d'observation</Text>
                 <TouchableOpacity
@@ -358,6 +346,42 @@ export default function ObservationModal() {
         confirmText="Confirmer"
         cancelText="Annuler"
       />
+
+      <Modal
+        visible={isImageSelectorOpen}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsImageSelectorOpen(false)}
+      >
+        <View style={styles.imageSelectorOverlay}>
+          <View style={styles.imageSelectorContainer}>
+            <View style={styles.imageSelectorHeader}>
+              <Text style={styles.imageSelectorTitle}>Choisir une image</Text>
+              <TouchableOpacity
+                onPress={() => setIsImageSelectorOpen(false)}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={availableImages}
+              numColumns={2}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.imageGrid}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.imageOption}
+                  onPress={() => handleSelectImage(item)}
+                >
+                  <Image source={item.source} style={styles.imageOptionImage} />
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 }
@@ -514,5 +538,54 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 16,
     color: '#1a1a1a',
+  },
+  // Styles pour le sélecteur d'images
+  imageSelectorOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageSelectorContainer: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    margin: 20,
+    maxHeight: '70%',
+    minWidth: '80%',
+  },
+  imageSelectorHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  imageSelectorTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  imageGrid: {
+    padding: 20,
+  },
+  imageOption: {
+    flex: 1,
+    margin: 5,
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 10,
+    padding: 10,
+  },
+  imageOptionImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    marginBottom: 5,
+  },
+  imageOptionText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
   },
 });

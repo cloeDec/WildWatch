@@ -1,8 +1,14 @@
 import Mapbox from "@rnmapbox/maps";
 import * as Location from "expo-location";
-import { useRouter, useFocusEffect } from "expo-router";
-import React, { useEffect, useRef, useCallback } from "react";
-import { Dimensions, Image, StyleSheet, TouchableOpacity, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useRef } from "react";
+import {
+  Dimensions,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { MAPBOX_CONFIG } from "../config/env";
 import { useObservationsStore } from "../hooks/useObservationsStore";
 
@@ -31,10 +37,9 @@ export const MapScreen: React.FC<MapScreenProps> = ({ location }) => {
     observations.map((o) => ({ id: o.id, species: o.species }))
   );
 
-  // Recharger les observations quand la carte devient visible
   useFocusEffect(
     useCallback(() => {
-      console.log('MapScreen: Focus effet - rechargement des observations');
+      console.log("MapScreen: Focus effet - rechargement des observations");
       loadObservations();
     }, [loadObservations])
   );
