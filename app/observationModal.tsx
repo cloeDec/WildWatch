@@ -10,8 +10,8 @@ import {
   View,
 } from "react-native";
 import DatePicker from "react-native-date-picker";
+import * as ImagePicker from 'expo-image-picker';
 import { ActionButtons } from "../components/ActionButtons";
-import { ImageGalleryModal } from "../components/ImageGalleryModal";
 import { ObservationForm } from "../components/ObservationForm";
 import { PhotoSelector } from "../components/PhotoSelector";
 import { useObservationsStore } from "../hooks/useObservationsStore";
@@ -43,7 +43,6 @@ export default function ObservationModal() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [date, setDate] = useState(new Date());
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
 
   const latitude = params.latitude ? parseFloat(params.latitude) : 0;
   const longitude = params.longitude ? parseFloat(params.longitude) : 0;
@@ -75,7 +74,6 @@ export default function ObservationModal() {
   };
 
   const handleTakePhoto = async () => {
-
     Alert.alert(
       "Choisir une photo",
       "Comment voulez-vous ajouter une photo ?",
@@ -89,23 +87,48 @@ export default function ObservationModal() {
 
   const handleLaunchCamera = async () => {
     try {
-      const simulatedPhotoUri = `camera://simulation_${Date.now()}`;
-      setPhotoUri(simulatedPhotoUri);
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission requise', 'L\'accès à la caméra est nécessaire pour prendre une photo.');
+        return;
+      }
 
-      Alert.alert("Simulation", "Photo simulée prise avec la caméra!");
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setPhotoUri(result.assets[0].uri);
+      }
     } catch (error) {
-      Alert.alert("Erreur", "Impossible de simuler la caméra");
+      Alert.alert("Erreur", "Impossible d'accéder à la caméra");
     }
   };
 
   const handlePickFromGallery = async () => {
-    setIsImageSelectorOpen(true);
-  };
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission requise', 'L\'accès à la galerie est nécessaire pour sélectionner une photo.');
+        return;
+      }
 
-  const handleSelectImage = (imageData: { id: string; source: any }) => {
-    const imageUri = `asset://${imageData.id}`;
-    setPhotoUri(imageUri);
-    setIsImageSelectorOpen(false);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setPhotoUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert("Erreur", "Impossible d'accéder à la galerie");
+    }
   };
 
   const handleDateConfirm = (selectedDate: Date) => {
@@ -285,11 +308,6 @@ export default function ObservationModal() {
         cancelText="Annuler"
       />
 
-      <ImageGalleryModal
-        visible={isImageSelectorOpen}
-        onClose={() => setIsImageSelectorOpen(false)}
-        onSelectImage={handleSelectImage}
-      />
     </Modal>
   );
 }

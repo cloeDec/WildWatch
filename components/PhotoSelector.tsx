@@ -13,33 +13,20 @@ interface PhotoSelectorProps {
 }
 
 
-const getImageSource = (photoUri: string) => {
-  if (photoUri.startsWith('asset://raccoon')) return require("../assets/images/raccoon.png");
-  if (photoUri.startsWith('asset://fleur1')) return require("../assets/images/thumb_fleur-printemps-rose-6153.jpg");
-  if (photoUri.startsWith('asset://fleur2')) return require("../assets/images/osteospermum-istock.jpg");
-  if (photoUri.startsWith('asset://fleur3')) return require("../assets/images/QJ2GDGC4DZFIRLOR4XYNNVENQA.jpg");
-  if (photoUri.startsWith('camera://simulation')) return require("../assets/images/raccoon.png");
-  return { uri: photoUri };
-};
-
 export const PhotoSelector: React.FC<PhotoSelectorProps> = ({
   photoUri,
   onTakePhoto,
 }) => {
-  const handlePress = () => {
-    onTakePhoto();
-  };
-
   return (
     <View style={styles.photoSection}>
       <TouchableOpacity
         style={styles.photoContainer}
-        onPress={handlePress}
+        onPress={onTakePhoto}
         activeOpacity={0.7}
       >
         {photoUri ? (
           <Image
-            source={getImageSource(photoUri)}
+            source={{ uri: photoUri }}
             style={styles.photoImage}
           />
         ) : (
