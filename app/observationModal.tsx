@@ -8,8 +8,11 @@ import {
   Alert,
   ScrollView,
   Modal,
+  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import DatePicker from 'react-native-date-picker';
 import { useObservationsStore } from '../hooks/useObservationsStore';
 import { CreateObservationDto } from '../types/observation';
 
@@ -31,8 +34,12 @@ export default function ObservationModal() {
 
   const [formData, setFormData] = useState({
     species: '',
-    description: '',
+    observationDate: new Date().toISOString().split('T')[0], // Format YYYY-MM-DD
   });
+
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [date, setDate] = useState(new Date());
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const latitude = params.latitude ? parseFloat(params.latitude) : 0;
   const longitude = params.longitude ? parseFloat(params.longitude) : 0;
@@ -48,6 +55,87 @@ export default function ObservationModal() {
 
   const handleClose = () => {
     router.back();
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      console.log('handleTakePhoto: Début de la prise de photo');
+
+      // Demander les permissions pour la caméra
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      console.log('handleTakePhoto: Status permission:', status);
+
+      if (status !== 'granted') {
+        Alert.alert('Permission requise', 'Nous avons besoin de votre permission pour accéder à la caméra.');
+        return;
+      }
+
+      // Proposer choix entre caméra et galerie
+      Alert.alert(
+        'Choisir une photo',
+        'Comment voulez-vous ajouter une photo ?',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Galerie', onPress: handlePickFromGallery },
+          { text: 'Caméra', onPress: handleLaunchCamera },
+        ]
+      );
+    } catch (error) {
+      console.error('Erreur lors de la prise de photo:', error);
+      Alert.alert('Erreur', 'Module caméra non disponible. Utilisez la galerie à la place.');
+      handlePickFromGallery();
+    }
+  };
+
+  const handleLaunchCamera = async () => {
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setPhotoUri(result.assets[0].uri);
+        console.log('Photo prise:', result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Erreur caméra:', error);
+      Alert.alert('Erreur', 'Caméra non disponible. Essayez la galerie.');
+    }
+  };
+
+  const handlePickFromGallery = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setPhotoUri(result.assets[0].uri);
+        console.log('Photo sélectionnée:', result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Erreur galerie:', error);
+      Alert.alert('Erreur', 'Impossible d\'accéder à la galerie');
+    }
+  };
+
+  const handleDateConfirm = (selectedDate: Date) => {
+    setDate(selectedDate);
+    setFormData({
+      ...formData,
+      observationDate: selectedDate.toISOString().split('T')[0]
+    });
+    setIsDatePickerOpen(false);
+  };
+
+  const handleDateCancel = () => {
+    setIsDatePickerOpen(false);
   };
 
   const handleSubmit = async () => {
@@ -67,10 +155,10 @@ export default function ObservationModal() {
 
       const observationData: CreateObservationDto = {
         species: formData.species.trim(),
-        description: formData.description.trim() || undefined,
         latitude,
         longitude,
         accuracy: 5, // Default accuracy
+        photos: photoUri ? [photoUri] : undefined,
       };
 
       console.log('Données de l\'observation:', observationData);
@@ -105,63 +193,83 @@ export default function ObservationModal() {
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={styles.scrollContent}
             >
-              <View style={styles.locationInfo}>
-                <Text style={styles.locationLabel}>📍 Position</Text>
-                <Text style={styles.locationText}>
-                  {latitude.toFixed(6)}°, {longitude.toFixed(6)}°
-                </Text>
+              {/* Zone photo circulaire */}
+              <View style={styles.photoSection}>
+                <TouchableOpacity style={styles.photoContainer} onPress={handleTakePhoto}>
+                  {photoUri ? (
+                    <Image source={{ uri: photoUri }} style={styles.photoImage} />
+                  ) : (
+                    <View style={styles.photoPlaceholder}>
+                      <Text style={styles.photoPlaceholderText}>📷</Text>
+                      <Text style={styles.photoPlaceholderSubtext}>Prendre une photo</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
               </View>
 
+              {/* Champ Nom (espèce) */}
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Espèce observée *</Text>
+                <Text style={styles.label}>Nom</Text>
                 <TextInput
                   ref={speciesInputRef}
                   style={styles.input}
                   value={formData.species}
                   onChangeText={(text) => setFormData({ ...formData, species: text })}
-                  placeholder="Ex: Renard roux, Aigle royal..."
+                  placeholder="Ex: Feuille jaune, Renard roux..."
                   placeholderTextColor="#999"
                   autoFocus={true}
                 />
               </View>
 
+              {/* Champ Date d'observation */}
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Description (optionnel)</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  value={formData.description}
-                  onChangeText={(text) => setFormData({ ...formData, description: text })}
-                  placeholder="Décrivez votre observation (comportement, taille, couleur...)"
-                  placeholderTextColor="#999"
-                  multiline={true}
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                />
+                <Text style={styles.label}>Date d'observation</Text>
+                <TouchableOpacity
+                  style={styles.input}
+                  onPress={() => setIsDatePickerOpen(true)}
+                >
+                  <Text style={styles.dateText}>
+                    {new Date(date).toLocaleDateString('fr-FR')}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={handleClose}
-                  disabled={isLoading}
-                >
-                  <Text style={styles.cancelButtonText}>Annuler</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.submitButton, (isLoading || !createNewObservation) && styles.submitButtonDisabled]}
+                  style={[styles.saveButton, (isLoading || !createNewObservation) && styles.saveButtonDisabled]}
                   onPress={handleSubmit}
                   disabled={isLoading || !createNewObservation}
                 >
-                  <Text style={styles.submitButtonText}>
-                    {isLoading ? 'Création...' : !createNewObservation ? 'Chargement...' : 'Créer l\'observation'}
+                  <Text style={styles.saveButtonText}>
+                    {isLoading ? 'Enregistrement...' : !createNewObservation ? 'Chargement...' : 'Enregistrer'}
                   </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.deleteButton} onPress={handleClose}>
+                  <Text style={styles.deleteButtonText}>Supprimer</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
+                  <Text style={styles.cancelButtonText}>Annuler</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
           </TouchableOpacity>
         </TouchableOpacity>
       </View>
+
+      <DatePicker
+        modal
+        open={isDatePickerOpen}
+        date={date}
+        onConfirm={handleDateConfirm}
+        onCancel={handleDateCancel}
+        mode="date"
+        locale="fr"
+        title="Sélectionner une date"
+        confirmText="Confirmer"
+        cancelText="Annuler"
+      />
     </Modal>
   );
 }
@@ -212,26 +320,43 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
+    alignItems: 'center',
   },
-  locationInfo: {
-    backgroundColor: '#e3f2fd',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 20,
+  photoSection: {
+    alignItems: 'center',
+    marginBottom: 30,
   },
-  locationLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1565c0',
+  photoContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  photoPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoPlaceholderText: {
+    fontSize: 30,
     marginBottom: 5,
   },
-  locationText: {
-    fontSize: 14,
-    color: '#1565c0',
-    fontFamily: 'monospace',
+  photoPlaceholderSubtext: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
   },
   formGroup: {
     marginBottom: 20,
+    width: '100%',
   },
   label: {
     fontSize: 16,
@@ -253,36 +378,50 @@ const styles = StyleSheet.create({
     paddingTop: 15,
   },
   buttonContainer: {
-    flexDirection: 'row',
+    width: '100%',
     gap: 12,
-    paddingTop: 10,
+    paddingTop: 20,
     paddingBottom: 20,
   },
-  cancelButton: {
-    flex: 1,
+  saveButton: {
     paddingVertical: 15,
-    borderRadius: 12,
-    backgroundColor: '#f8f9fa',
+    borderRadius: 25,
+    backgroundColor: '#007AFF',
     alignItems: 'center',
+    marginBottom: 12,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+  },
+  deleteButton: {
+    paddingVertical: 15,
+    borderRadius: 25,
+    backgroundColor: '#FF3B30',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  deleteButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+  },
+  cancelButton: {
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginBottom: 12,
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#666',
   },
-  submitButton: {
-    flex: 2,
-    paddingVertical: 15,
-    borderRadius: 12,
-    backgroundColor: '#007AFF',
-    alignItems: 'center',
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  submitButtonText: {
+  dateText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
+    color: '#1a1a1a',
   },
 });
