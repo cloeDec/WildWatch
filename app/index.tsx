@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { useCurrentPosition } from '../hooks/useCurrentPosition';
 import { LocationLoadingScreen } from '../components/LocationLoadingScreen';
 import { LocationUnauthorizedScreen } from '../components/LocationUnauthorizedScreen';
+import { ErrorScreen } from '../components/ErrorScreen';
 import { MapScreen } from '../components/MapScreen';
 
 export default function Index() {
@@ -23,9 +24,10 @@ export default function Index() {
 
       case 'error':
         return (
-          <LocationUnauthorizedScreen
+          <ErrorScreen
+            title="Erreur de géolocalisation"
+            message={error || "Impossible d'obtenir votre position"}
             onRetry={refreshLocation}
-            error={error || undefined}
           />
         );
 
